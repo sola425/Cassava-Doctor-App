@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#1F2937" />
+    <title>Cassava Doctor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* High Contrast Reset */
+      html, body, #root {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overscroll-behavior: none;
+        background-color: #111827; /* bg-gray-900 */
+      }
+      /* Hide scrollbar for cleaner PWA look */
+      ::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+      }
+
+      /* Page Transitions */
+      .page {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        transform: scale(0.97);
+        transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+        pointer-events: none;
+        will-change: opacity, transform;
+      }
+      .page.active {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+      }
+      
+      /* Result Card Animation */
+       @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+      .animate-slide-up {
+        /* Added a bounce effect with cubic-bezier */
+        animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+
+       /* Loader pulse animation */
+      @keyframes pulse-icon {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.05); }
+      }
+      .animate-pulse-icon {
+        animation: pulse-icon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      
+      /* Camera button pulse animation */
+      @keyframes pulse-camera {
+        0%, 100% { 
+          transform: scale(1); 
+          box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); 
+        }
+        70% { 
+          transform: scale(1.05); 
+          box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); 
+        }
+      }
+      .animate-pulse-camera {
+        animation: pulse-camera 2s infinite;
+      }
+
+      /* Radial Progress Bar */
+      .radial-progress {
+        transform: rotate(-90deg);
+      }
+      .radial-progress circle {
+        transition: stroke-dashoffset 0.5s ease-out;
+      }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@18.2.0/index.js",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@18.2.0/client.js",
+    "react-dom": "https://aistudiocdn.com/react-dom@18.2.0/index.js",
+    "lucide-react": "https://cdn.jsdelivr.net/npm/lucide-react@0.263.1/+esm",
+    "@tensorflow/tfjs": "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/+esm",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^18.2.0/",
+    "react/": "https://aistudiocdn.com/react@^18.2.0/"
+  }
+}
+</script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,1 @@
+{"tfjsVersion":"1.7.4","tmVersion":"2.4.10","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2025-11-18T19:34:19.911Z","userMetadata":{},"modelName":"tm-my-image-model","labels":["Cassava_Healthy","Cassava__mosaic_disease","Cassava__green_mottle","Cassava__brown_streak_disease","Cassava__bacterial_blight"],"imageSize":224}
