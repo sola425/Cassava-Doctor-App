@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Camera, Upload, RefreshCw, CheckCircle, AlertTriangle, ChevronLeft, X, Leaf, Globe } from 'lucide-react';
@@ -5,6 +6,7 @@ import { LayersModel, loadLayersModel, ready, browser, scalar, Tensor, dispose }
 
 // --- Constants ---
 const IMAGE_SIZE = 224;
+// Note: These paths assume the files are in the 'public' folder (served at root)
 const MODEL_URL = './model.json';
 const METADATA_URL = './tm_metadata.json';
 
@@ -32,7 +34,7 @@ const DISEASE_INFO: Record<string, Record<Language, string>> = {
     ig: "NCHỌPỤTA (CMD):\nNke a bụ ọrịa a na-ahụkarị. Ị ga-ahụ na akwụkwọ ya na-acha odo odo na akwụkwọ ndụ, na-akpụkọta akpụkọta ma dị pere mpe. Osisi anaghịkwa eto ofuma, ji ya anaghị ekwe.\n\nIHE Ị GA-EME:\n1. Wepụ Ozugbo: Wepụ osisi ahụ nwere ọrịa kpamkpam site na mgbọrọgwụ.\n2. Kpọọ Ọkụ: Kpọọ osisi ndị ahụ ọkụ n'ebe dị anya ka ụmụ ahụhụ ghara ife.\n3. Mkpụrụ Dị Mma: Jiri naanị mkpụrụ osisi na-anaghị anwụ anwụ (dịka TME 419) kụọ ọzọ.\n4. Ịdị Ọcha: Debe ugbo ọcha ka ụmụ ahụhụ ghara ịba ụba."
   },
   'Cassava bacterial blight': {
-    en: "DIAGNOSIS (CBB):\nLook for angular spots on leaves that look like they are soaked in water. These spots turn brown and the leaves wither/die, appearing scorched by fire. The stems may ooze a sticky liquid, and the plant dies from the top downwards ('Candlestick' appearance).\n\nMANAGEMENT PLAN:\n1. Pruning: Cut off the infected branches using a clean knife. Dip the knife in bleach or pass it through fire between cuts.\n2. Clean Up: Gather all fallen dead leaves and burn them. Do not leave them on the ground.\n3. Crop Rotation: Do not plant cassava on this land next season. Plant maize or beans instead to starve the bacteria.\n4. Selection: Never take stems from a farm that has this disease.",
+    en: "DIAGNOSIS (CBB):\nLook for angular spots on leaves that look like they are soaked in water. These spots turn brown and the leaves wither/die, appearing scorched by fire. The stems may ooze a sticky liquid, and the plant dies from the top downwards ('Candlestick' appearance).\n\nMANAGEMENT PLAN:\n1. Pruning: Cut off the infected branches using a clean knife. Dip the knife in bleach or pass it through fire between cuts.\n2. Clean Up: Gather all fallen dead leaves and burn them. Do not leave it in the farm.\n3. Crop Rotation: Do not plant cassava on this land next season. Plant maize or beans instead to starve the bacteria.\n4. Selection: Never take stems from a farm that has this disease.",
     yo: "AYEWO (CBB):\nE o ri pe ewe n ro bi eni pe omi gbona da si. Ewe a wa di dudu bi eni pe ina jo o. Omi ti o nipon a ma jade lara igi, igi a si bere si ku lati oke wa (bi opa fitila).\n\nOHUN TI E LE SE:\n1. Gige: E ge awon ibi ti arun wa kuro pelu obe ti e ti fi ina tabi oogun ko.\n2. Sisun: E ko gbogbo ewe ati igi ti e ge kuro, ki e si sun won.\n3. Yiyi Oko: E ma gbin ege si ibi kan naa leralera; e gbin agbado tabi ewa si be ni odun to n bo.\n4. Igi Gbingbin: E ma gba igi lati ara ege ti o ni arun yii rara.",
     ha: "BINCIKE (CBB):\nZa a ga dige-dige kamar na ruwan zafi a ganye wanda ke komawa launin kasa kamar wuta ta kone shi. Ruwa yana fita daga jikin iccen, kuma yana bushewa daga sama zuwa kasa.\n\nABIN YI:\n1. Yankewa: Yanke sassan da suka lalace da wuka mai tsabta (a sa wuka a wuta ko ruwan bleach).\n2. Kone Shara: Tara duk ganyen da ya zube a kone; kar a bar shi a gona.\n3. Canza Shuka: Kar a sake shuka rogo a wajen a shekara mai zuwa; a shuka masara ko wake.\n4. Kariya: Kada a ɗauki irin rogo daga gonar da ke da wannan cutar.",
     ig: "NCHỌPỤTA (CBB):\nỊ ga-ahụ ntụpọ mmiri na akwụkwọ nke na-emesịa gbanwee nchara nchara dịka ọkụ ọ gbara ya. Akwụkwọ na-akpọnwụ site n'elu na-agbada, mmiri na-esikwa n'osisi apụta.\n\nIHE Ị GA-EME:\n1. Bechapụ: Jiri mma dị ọcha bepụ ebe ndị nwere ọrịa (jiri ọkụ kpoo mma ahụ).\n2. Kpọọ Ọkụ: Kpọọ irighiri osisi na akwụkwọ ndị ahụ ọkụ; ahapụla ha n'ugbo.\n3. Ịkụ Ihe Ọzọ: Akụla akpụ n'otu ebe ahụ n'oge ọzọ. Kụọ ọka ma ọ bụ agwa.\n4. Mkpụrụ Dị Ọcha: Ejila osisi sitere n'ugbo nwere ọrịa a akụ ihe."
@@ -59,8 +61,22 @@ type Prediction = {
 };
 type AppState = 'loading' | 'main' | 'camera' | 'result';
 
+interface ButtonProps {
+  children?: React.ReactNode;
+  onClick?: () => void;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  className?: string;
+}
+
+interface ResultBarProps {
+  label: string;
+  probability: number;
+}
+
 // --- Helper Components ---
-const Button = ({ children, onClick, variant = 'primary', className = '' }: { children: React.ReactNode, onClick?: () => void, variant?: 'primary' | 'secondary' | 'ghost', className?: string }) => {
+
+// Updated Button to make children optional and strictly typed
+const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'primary', className = '' }) => {
   const baseClasses = 'w-full flex items-center justify-center gap-3 rounded-xl px-4 py-3.5 text-base font-bold transition-transform duration-200 ease-in-out active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900';
   const variantClasses = {
     primary: 'bg-emerald-500 text-white hover:bg-emerald-600 focus-visible:ring-emerald-500',
@@ -68,6 +84,30 @@ const Button = ({ children, onClick, variant = 'primary', className = '' }: { ch
     ghost: 'bg-transparent text-emerald-400 hover:bg-emerald-900/50 focus-visible:ring-emerald-500',
   };
   return <button onClick={onClick} className={`${baseClasses} ${variantClasses[variant]} ${className}`}>{children}</button>;
+};
+
+// Ensure ResultBar is defined outside App
+const ResultBar: React.FC<ResultBarProps> = ({ label, probability }) => {
+  const percentage = Math.round(probability * 100);
+  const isHealthy = label.toLowerCase().includes('healthy');
+  const isTop = probability > 0.5;
+
+  let barColor = 'bg-gray-500';
+  if(isHealthy) barColor = 'bg-green-500';
+  else if (isTop) barColor = 'bg-orange-500';
+  else barColor = 'bg-yellow-600';
+
+  return (
+    <div className="w-full mb-2">
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-sm font-medium truncate capitalize max-w-[70%]">{label}</span>
+        <span className="text-sm font-bold text-gray-300">{percentage}%</span>
+      </div>
+      <div className="w-full bg-gray-700 rounded-full h-2.5">
+        <div className={`${barColor} h-2.5 rounded-full transition-all duration-500 ease-out`} style={{ width: `${percentage}%` }} />
+      </div>
+    </div>
+  );
 };
 
 // --- Main Application ---
@@ -87,11 +127,16 @@ const App: React.FC = () => {
     try {
       setError(null);
       setAppState('loading');
-      console.log('Model loading from local files...');
+      console.log('Attempting to load model...');
       
       // 1. Load labels from metadata
+      // We fetch explicitly to catch 404s better for the user
       const metadataReq = await fetch(METADATA_URL);
+      if (!metadataReq.ok) {
+        throw new Error(`Failed to load metadata (Status: ${metadataReq.status}). Is the file in the 'public' folder?`);
+      }
       const metadata = await metadataReq.json();
+      
       // Format labels: Replace underscores with spaces
       const loadedLabels = metadata.labels.map((l: string) => l.replace(/_+/g, ' ').trim());
       setLabels(loadedLabels);
@@ -104,11 +149,16 @@ const App: React.FC = () => {
       console.log('Model loaded successfully.');
     } catch (err: any) {
       console.error('Model loading failed:', err);
+      let errorMessage = 'Failed to load the model.';
+      
       if (err.message && err.message.includes('weights')) {
-         setError('Failed to load model weights. Please ensure weights.bin is present.');
+         errorMessage = 'Failed to load model weights. Please ensure weights.bin is in the "public" folder.';
+      } else if (err.message && err.message.includes('404')) {
+         errorMessage = 'Model files not found (404). Please ensure model.json is in the "public" folder.';
       } else {
-         setError('Failed to load the model. Please ensure model.json, tm_metadata.json and weights.bin are present.');
+         errorMessage = `Error: ${err.message || 'Unknown error'}. Ensure files are in "public".`;
       }
+      setError(errorMessage);
     }
   }, []);
 
@@ -230,12 +280,12 @@ const App: React.FC = () => {
       <h1 className="text-3xl font-bold mb-2">Cassava Doctor</h1>
       <p className="text-lg text-gray-300">Loading AI Model...</p>
       {error && (
-        <div className="mt-6 bg-red-900/50 border border-red-500 text-red-300 p-4 rounded-lg flex items-center gap-3 text-left">
+        <div className="mt-6 bg-red-900/50 border border-red-500 text-red-300 p-4 rounded-lg flex items-center gap-3 text-left max-w-md">
           <AlertTriangle size={24} className="flex-shrink-0" />
           <div>
             <p className="font-bold">Loading Error</p>
             <p className="text-sm">{error}</p>
-            <button onClick={loadModel} className="mt-2 text-sm underline">Try again</button>
+            <button onClick={loadModel} className="mt-2 text-sm underline font-bold hover:text-white">Try again</button>
           </div>
         </div>
       )}
@@ -296,29 +346,6 @@ const App: React.FC = () => {
       </div>
     </div>
   );
-  
-  const ResultBar = ({ label, probability }: {label: string, probability: number}) => {
-    const percentage = Math.round(probability * 100);
-    const isHealthy = label.toLowerCase().includes('healthy');
-    const isTop = probability > 0.5;
-
-    let barColor = 'bg-gray-500';
-    if(isHealthy) barColor = 'bg-green-500';
-    else if (isTop) barColor = 'bg-orange-500';
-    else barColor = 'bg-yellow-600';
-
-    return (
-      <div className="w-full mb-2">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-sm font-medium truncate capitalize max-w-[70%]">{label}</span>
-          <span className="text-sm font-bold text-gray-300">{percentage}%</span>
-        </div>
-        <div className="w-full bg-gray-700 rounded-full h-2.5">
-          <div className={`${barColor} h-2.5 rounded-full transition-all duration-500 ease-out`} style={{ width: `${percentage}%` }} />
-        </div>
-      </div>
-    );
-  };
 
   const renderResultScreen = () => {
     const topPrediction = predictions[0];
