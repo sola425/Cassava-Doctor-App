@@ -169,17 +169,53 @@ const App: React.FC = () => {
   const startCamera = async () => {
     try {
       setError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: 1280, height: 720 },
-      });
-      if (videoRef.current) {
+      let stream: MediaStream | null = null;
+  
+      // Attempt 1: Ideal constraints (back camera, HD)
+      try {
+        console.log('Attempting to start camera with ideal constraints...');
+        const idealConstraints = {
+          video: {
+            facingMode: { ideal: 'environment' }, // Prefer back camera
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        };
+        stream = await navigator.mediaDevices.getUserMedia(idealConstraints);
+      } catch (err: any) {
+        console.warn('Ideal constraints failed, trying fallback:', err.name);
+        // If ideal fails (e.g., OverconstrainedError), try generic constraints
+        if (['OverconstrainedError', 'NotFoundError', 'NotReadableError'].includes(err.name)) {
+          console.log('Falling back to generic camera constraints...');
+          const fallbackConstraints = { video: true };
+          stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+        } else {
+          // Re-throw other errors like NotAllowedError to be caught by the outer catch
+          throw err;
+        }
+      }
+  
+      if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        setAppState('camera');
+      } else {
+        throw new Error("Could not acquire a camera stream after fallback.");
       }
-      setAppState('camera');
-    } catch (err) {
-      console.error('Camera access denied:', err);
-      setError('Camera access was denied. Please enable camera permissions in your browser settings.');
+  
+    } catch (err: any) {
+      console.error('Camera access failed:', err.name, err.message);
+      let errorMessage = 'Could not start the camera.';
+      if (err.name === 'NotAllowedError') {
+        errorMessage = 'Camera access was denied. Please enable camera permissions in your browser settings and try again.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage = 'No camera found on this device. Please use the "Upload Image" option instead.';
+      } else if (err.name === 'NotReadableError') {
+         errorMessage = 'The camera is currently in use by another app or browser tab. Please close other applications using the camera and try again.';
+      } else if (err.name === 'OverconstrainedError') {
+         errorMessage = 'The camera on this device is not supported by the browser, even with fallback settings.';
+      }
+      setError(errorMessage);
       setAppState('main');
     }
   };
@@ -318,6 +354,12 @@ const App: React.FC = () => {
           onChange={handleFileUpload}
           className="hidden"
         />
+         {error && (
+            <div className="mt-4 bg-red-900/50 border border-red-500 text-red-300 p-3 rounded-lg text-sm text-center max-w-md">
+              <p className="font-bold">Camera Error</p>
+              <p>{error}</p>
+            </div>
+          )}
       </main>
       <footer className="text-center text-gray-500 text-sm mt-8">
         <p>This tool provides a preliminary diagnosis. Always consult with a qualified agricultural expert for confirmation.</p>
