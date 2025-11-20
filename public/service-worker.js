@@ -7,9 +7,9 @@ const PRECACHE_URLS = [
   '/index.html',
   '/index.tsx',
   '/manifest.json',
-  '/model.json',
-  '/tm_metadata.json',
-  '/weights.bin'
+  '/public/model.json',
+  '/public/tm_metadata.json',
+  '/public/weights.bin'
 ];
 
 // Install Event: Cache core files immediately
